@@ -387,6 +387,10 @@ Converts the source document to HTML.
   * `ignoreEmptyParagraphs`: by default, empty paragraphs are ignored.
     Set this option to `false` to preserve empty paragraphs in the output.
 
+  * `preserveAlignment`: by default, paragraph alignment is not written to HTML.
+    Set this option to `true` to preserve Word paragraph alignment as inline `text-align` CSS.
+    This also applies to paragraphs inside table cells. Word's `both` and `distribute` values are mapped to CSS `justify`.
+
   * `idPrefix`:
     a string to prepend to any generated IDs,
     such as those used by bookmarks, footnotes and endnotes.

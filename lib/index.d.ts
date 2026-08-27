@@ -35,6 +35,7 @@ interface Options {
     idPrefix?: string;
     externalFileAccess?: boolean;
     transformDocument?: (element: any) => any;
+    preserveAlignment?: boolean;
 }
 
 interface ImageConverter {
