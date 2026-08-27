@@ -439,6 +439,11 @@ Converts the source document to HTML.
   * `ignoreEmptyParagraphs`: by default, empty paragraphs are ignored.
     Set this option to `false` to preserve empty paragraphs in the output.
 
+  * `inferListNestingFromIndentation`: by default, list nesting follows Word's numbering level (`w:ilvl`).
+    Set this option to `true` to use the effective left indentation as a fallback when a document stores visually nested lists as separate level-zero numbering definitions.
+    Explicit numbering levels greater than zero remain authoritative, and direct paragraph indentation takes precedence over indentation from the numbering definition.
+    This fallback only affects paragraphs that are actual Word lists; manually typed prefixes such as `(1)` are not converted into lists.
+
   * `idPrefix`:
     a string to prepend to any generated IDs,
     such as those used by bookmarks, footnotes and endnotes.
