@@ -1,0 +1,45 @@
+name: Integrate PR 448
+
+on:
+  push:
+    branches:
+      - feature/numbering-class-map-list-ordering
+    paths:
+      - .github/workflows/integrate-pr448.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: feature/numbering-class-map-list-ordering
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch PR 448
+        run: |
+          git fetch https://github.com/mwilliamson/mammoth.js.git pull/448/head:pr448
+
+      - name: Cherry-pick PR 448
+        run: |
+          set +e
+          git cherry-pick f13c5ad74e921979a2bb75ab02e04b7e9ec480bb
+          status=$?
+          if [ $status -ne 0 ]; then
+            echo "Cherry-pick conflicts:"
+            git status --short
+            git diff --name-only --diff-filter=U
+            git diff
+            exit $status
+          fi
+
+      - name: Push combined branch
+        run: git push origin HEAD:feature/numbering-class-map-list-ordering
