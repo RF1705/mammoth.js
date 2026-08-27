@@ -25,21 +25,126 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Fetch PR 448
-        run: |
-          git fetch https://github.com/mwilliamson/mammoth.js.git pull/448/head:pr448
+        run: git fetch https://github.com/mwilliamson/mammoth.js.git pull/448/head:pr448
 
-      - name: Cherry-pick PR 448
+      - name: Cherry-pick and resolve conflicts
         run: |
           set +e
           git cherry-pick f13c5ad74e921979a2bb75ab02e04b7e9ec480bb
           status=$?
+          set -e
+
           if [ $status -ne 0 ]; then
-            echo "Cherry-pick conflicts:"
-            git status --short
-            git diff --name-only --diff-filter=U
-            git diff
-            exit $status
+            python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('lib/document-to-html.js')
+          text = path.read_text()
+
+          text = re.sub(
+              r'<<<<<<< HEAD\n\s*var html = elementToHtml\(document, messages, \{\}\);\n=======\n\s*\n\s*var html = elementToHtml\(document, messages, \{listState: listState\}\);\n>>>>>>>[^\n]*',
+              '        var html = elementToHtml(document, messages, {listState: listState});',
+              text,
+              count=1
+          )
+
+          paragraph_prefix = '''    function convertParagraph(element, messages, options) {
+              var htmlPath = htmlPathForParagraph(element, messages);
+
+              if (element.numbering && element.numbering.isOrdered && element.numbering.startOverride) {
+                  htmlPath = modifyHtmlPathForListContinuation(htmlPath, element.numbering.startOverride);
+              } else if (options && options.listContinuation && options.listStartNumber && element.numbering && element.numbering.isOrdered) {
+                  htmlPath = modifyHtmlPathForListContinuation(htmlPath, options.listStartNumber);
+              } else if (options && options.continuedListStartNumber && element.numbering && element.numbering.isOrdered) {
+                  htmlPath = modifyHtmlPathForListContinuation(htmlPath, options.continuedListStartNumber);
+              } else if (options && options.forceNewList && element.numbering) {
+                  htmlPath = makeFreshList(htmlPath);
+              }
+
+              htmlPath = withNumberingClass(htmlPath, element.numbering);
+
+              return htmlPath.wrap(function() {'''
+
+          text, count = re.subn(
+              r'    function convertParagraph\(element, messages, options\) \{.*?        return (?:path|htmlPath)\.wrap\(function\(\) \{',
+              paragraph_prefix,
+              text,
+              count=1,
+              flags=re.S
+          )
+          if count != 1:
+              raise SystemExit('Could not resolve convertParagraph conflict')
+          if '<<<<<<<' in text or '>>>>>>>' in text or '\n=======' in text:
+              raise SystemExit('Unresolved conflict markers remain in document-to-html.js')
+          path.write_text(text)
+
+          path = Path('lib/docx/numbering-xml.js')
+          text = path.read_text()
+
+          replacement = '''    function findLevel(numId, level) {
+              return findLevelWithSeenNumIds(numId, level, {});
+          }
+
+          function findLevelWithSeenNumIds(numId, level, seenNumIds) {
+              if (seenNumIds[numId]) {
+                  return null;
+              }
+              seenNumIds[numId] = true;
+
+              var num = nums[numId];
+              if (!num) {
+                  return null;
+              }
+
+              var abstractNum = abstractNums[num.abstractNumId];
+              if (!abstractNum) {
+                  return null;
+              }
+
+              var resolvedLevel;
+              if (abstractNum.numStyleLink == null) {
+                  resolvedLevel = abstractNums[num.abstractNumId].levels[level];
+              } else {
+                  var style = styles.findNumberingStyleById(abstractNum.numStyleLink);
+                  resolvedLevel = findLevelWithSeenNumIds(style.numId, level, seenNumIds);
+              }
+
+              if (resolvedLevel && num.levelOverrides && num.levelOverrides[level]) {
+                  resolvedLevel = _.extend({}, resolvedLevel, num.levelOverrides[level]);
+              }
+
+              if (resolvedLevel) {
+                  resolvedLevel = _.extend({}, resolvedLevel, {numId: numId});
+              }
+
+              return resolvedLevel;
+          }
+
+'''
+
+          text, count = re.subn(
+              r'    function findLevel\(numId, level\) \{.*?(?=    function findLevelByParagraphStyleId)',
+              replacement,
+              text,
+              count=1,
+              flags=re.S
+          )
+          if count != 1:
+              raise SystemExit('Could not resolve numbering findLevel conflict')
+          if '<<<<<<<' in text or '>>>>>>>' in text or '\n=======' in text:
+              raise SystemExit('Unresolved conflict markers remain in numbering-xml.js')
+          path.write_text(text)
+          PY
+
+            git add lib/document-to-html.js lib/docx/numbering-xml.js
+            GIT_EDITOR=true git cherry-pick --continue
           fi
+
+      - name: Run tests
+        run: |
+          npm ci
+          npm test
 
       - name: Push combined branch
         run: git push origin HEAD:feature/numbering-class-map-list-ordering
