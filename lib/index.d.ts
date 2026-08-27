@@ -35,6 +35,14 @@ interface Options {
     idPrefix?: string;
     externalFileAccess?: boolean;
     transformDocument?: (element: any) => any;
+    numberingClassMap?: Array<NumberingClassMapping>;
+}
+
+interface NumberingClassMapping {
+    numFmt?: string;
+    levelText?: string;
+    level?: string | number;
+    className: string;
 }
 
 interface ImageConverter {
