@@ -17,29 +17,27 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: feature/numbering-class-map
-      - name: Document numberingClassMap
+      - name: Fix lint issue
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          path = Path("README.md")
+          path = Path("lib/document-to-html.js")
           text = path.read_text()
-          marker = "#### Custom image handlers\n"
-          section = '''#### Custom numbering classes\n\nMammoth preserves the numbering format (`w:numFmt`) and level text (`w:lvlText`) for each Word list level.\nThe `numberingClassMap` option can be used to add CSS classes to the generated `ol` or `ul` element for matching levels.\nThis is useful when two ordered list levels have different Word numbering formats that would otherwise both be rendered as ordinary HTML ordered lists.\n\nFor example, a Word numbering level with `w:numFmt=\"decimal\"` and `w:lvlText=\"%1.%2\"` can be mapped to a `legal-list` class, while `%1.%2.` remains unchanged:\n\n```javascript\nvar options = {\n    numberingClassMap: [\n        {\n            numFmt: \"decimal\",\n            levelText: \"%1.%2\",\n            className: \"legal-list\"\n        },\n        {\n            numFmt: \"lowerLetter\",\n            className: \"alpha-list\"\n        }\n    ]\n};\n\nmammoth.convertToHtml({path: \"document.docx\"}, options);\n```\n\nEach mapping can use the following properties:\n\n* `numFmt` (optional): the Word `w:numFmt` value, for example `decimal`, `lowerLetter`, `upperRoman` or `bullet`.\n* `levelText` (optional): the exact Word `w:lvlText` value, for example `%1.`, `%1.%2`, `%1.%2.` or `(%1)`.\n* `level` (optional): the zero-based Word numbering level (`w:ilvl`).\n* `className`: the CSS class to add when the mapping matches.\n\nAll specified matcher properties must match. The class is applied only to the generated list element for the current numbering level, not to its parent or root list. If several mappings match the same level, their classes are combined.\n\nFor example:\n\n```javascript\nnumberingClassMap: [\n    {numFmt: \"decimal\", levelText: \"%1.%2\", className: \"legal-list\"},\n    {numFmt: \"decimal\", level: 1, className: \"second-level\"}\n]\n```\n\nA level matching both rules is rendered with both classes, for example:\n\n```html\n<ol class=\"legal-list second-level\">\n```\n\nIf `numberingClassMap` is omitted, Mammoth's existing list output is unchanged.\n\n'''
-
-          if "#### Custom numbering classes\n" not in text:
-              if marker not in text:
-                  raise SystemExit("README insertion marker not found")
-              text = text.replace(marker, section + marker, 1)
-              path.write_text(text)
+          text = text.replace(
+              'id: noteRefHtmlId(element),\n',
+              'id: noteRefHtmlId(element)\n',
+              1
+          )
+          path.write_text(text)
           PY
-      - name: Commit README
+      - name: Commit fix
         run: |
-          if git diff --quiet -- README.md; then
+          if git diff --quiet -- lib/document-to-html.js; then
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add README.md
-          git commit -m "Document numbering class mapping"
+          git add lib/document-to-html.js
+          git commit -m "Fix numbering class map lint"
           git push origin HEAD:feature/numbering-class-map
