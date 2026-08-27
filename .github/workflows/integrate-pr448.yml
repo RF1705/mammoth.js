@@ -46,3 +46,5 @@ jobs:
 
       - name: Push combined branch
         run: git push origin HEAD:feature/numbering-class-map-list-ordering
+
+      # Temporary workflow: removed again after a successful integration.
