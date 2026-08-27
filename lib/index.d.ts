@@ -36,6 +36,7 @@ interface Options {
     externalFileAccess?: boolean;
     transformDocument?: (element: any) => any;
     inferListNestingFromIndentation?: boolean;
+    preserveAlignment?: boolean;
     numberingClassMap?: Array<NumberingClassMapping>;
 }
 

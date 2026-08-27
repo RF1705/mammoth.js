@@ -444,6 +444,10 @@ Converts the source document to HTML.
     Explicit numbering levels greater than zero remain authoritative, and direct paragraph indentation takes precedence over indentation from the numbering definition.
     This fallback only affects paragraphs that are actual Word lists; manually typed prefixes such as `(1)` are not converted into lists.
 
+  * `preserveAlignment`: by default, paragraph alignment is not written to HTML.
+    Set this option to `true` to preserve Word paragraph alignment as inline `text-align` CSS.
+    This also applies to paragraphs inside table cells. Word's `both` and `distribute` values are mapped to CSS `justify`.
+
   * `idPrefix`:
     a string to prepend to any generated IDs,
     such as those used by bookmarks, footnotes and endnotes.
