@@ -230,6 +230,58 @@ var options = {
 };
 ```
 
+#### Custom numbering classes
+
+Mammoth preserves the numbering format (`w:numFmt`) and level text (`w:lvlText`) for each Word list level.
+The `numberingClassMap` option can be used to add CSS classes to the generated `ol` or `ul` element for matching levels.
+This is useful when two ordered list levels have different Word numbering formats that would otherwise both be rendered as ordinary HTML ordered lists.
+
+For example, a Word numbering level with `w:numFmt="decimal"` and `w:lvlText="%1.%2"` can be mapped to a `legal-list` class, while `%1.%2.` remains unchanged:
+
+```javascript
+var options = {
+    numberingClassMap: [
+        {
+            numFmt: "decimal",
+            levelText: "%1.%2",
+            className: "legal-list"
+        },
+        {
+            numFmt: "lowerLetter",
+            className: "alpha-list"
+        }
+    ]
+};
+
+mammoth.convertToHtml({path: "document.docx"}, options);
+```
+
+Each mapping can use the following properties:
+
+* `numFmt` (optional): the Word `w:numFmt` value, for example `decimal`, `lowerLetter`, `upperRoman` or `bullet`.
+* `levelText` (optional): the exact Word `w:lvlText` value, for example `%1.`, `%1.%2`, `%1.%2.` or `(%1)`.
+* `level` (optional): the zero-based Word numbering level (`w:ilvl`).
+* `className`: the CSS class to add when the mapping matches.
+
+All specified matcher properties must match. The class is applied only to the generated list element for the current numbering level, not to its parent or root list. If several mappings match the same level, their classes are combined.
+
+For example:
+
+```javascript
+numberingClassMap: [
+    {numFmt: "decimal", levelText: "%1.%2", className: "legal-list"},
+    {numFmt: "decimal", level: 1, className: "second-level"}
+]
+```
+
+A level matching both rules is rendered with both classes, for example:
+
+```html
+<ol class="legal-list second-level">
+```
+
+If `numberingClassMap` is omitted, Mammoth's existing list output is unchanged.
+
 #### Custom image handlers
 
 By default, images are converted to `<img>` elements with the source included inline in the `src` attribute.
