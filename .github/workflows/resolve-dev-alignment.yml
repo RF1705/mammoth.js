@@ -1,0 +1,67 @@
+name: Resolve dev alignment
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - .github/workflows/resolve-dev-alignment.yml
+
+permissions:
+  contents: write
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - name: Apply alignment integration
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('lib/document-to-html.js')
+          s = p.read_text()
+
+          old = '''        htmlPath = withNumberingClass(htmlPath, element.numbering);\n        htmlPath = withParagraphAlignment(htmlPath, element.alignment);\n\n        return htmlPath.wrap(function() {'''
+          new = '''        htmlPath = withNumberingClass(htmlPath, element.numbering);\n        var cssAlignment = cssAlignmentFor(element.alignment);\n        if (cssAlignment !== options.tableCellAlignment) {\n            htmlPath = withParagraphAlignment(htmlPath, element.alignment);\n        }\n\n        return htmlPath.wrap(function() {'''
+          if old not in s:
+              raise SystemExit('paragraph alignment hook not found')
+          s = s.replace(old, new, 1)
+
+          old = '''        if (alignment === "both" || alignment === "distribute") {\n            return "justify";\n        }\n        if (alignment === "left" || alignment === "right" || alignment === "center" ||\n                alignment === "start" || alignment === "end" || alignment === "justify") {\n            return alignment;\n        }\n'''
+          new = '''        if (alignment === "both" || alignment === "distribute") {\n            return "justify";\n        }\n        if (alignment === "start") {\n            return "left";\n        }\n        if (alignment === "end") {\n            return "right";\n        }\n        if (alignment === "left" || alignment === "right" || alignment === "center" ||\n                alignment === "justify") {\n            return alignment;\n        }\n'''
+          if old not in s:
+              raise SystemExit('alignment mapping not found')
+          s = s.replace(old, new, 1)
+
+          old = '''    function convertTableCell(element, messages, options) {\n        var tagName = options.isTableHeader ? "th" : "td";\n        var children = convertElements(element.children, messages, options);\n        var attributes = {};\n        if (element.colSpan !== 1) {\n            attributes.colspan = element.colSpan.toString();\n        }\n        if (element.rowSpan !== 1) {\n            attributes.rowspan = element.rowSpan.toString();\n        }\n\n        return [\n            Html.freshElement(tagName, attributes, [Html.forceWrite].concat(children))\n        ];\n    }\n'''
+          new = '''    function convertTableCell(element, messages, options) {\n        var tagName = options.isTableHeader ? "th" : "td";\n        var cellAlignment = commonTableCellAlignment(element);\n        var childOptions = _.extend({}, options, {tableCellAlignment: cellAlignment});\n        var children = convertElements(element.children, messages, childOptions);\n        var attributes = {};\n        if (element.colSpan !== 1) {\n            attributes.colspan = element.colSpan.toString();\n        }\n        if (element.rowSpan !== 1) {\n            attributes.rowspan = element.rowSpan.toString();\n        }\n        if (preserveAlignment && cellAlignment) {\n            attributes.style = "text-align: " + cellAlignment;\n        }\n\n        return [\n            Html.freshElement(tagName, attributes, [Html.forceWrite].concat(children))\n        ];\n    }\n\n    function commonTableCellAlignment(element) {\n        var alignments = element.children\n            .filter(function(child) {\n                return child.type === documents.types.paragraph;\n            })\n            .map(function(child) {\n                return cssAlignmentFor(child.alignment);\n            })\n            .filter(function(alignment) {\n                return !!alignment;\n            });\n\n        if (alignments.length === 0) {\n            return null;\n        }\n\n        var firstAlignment = alignments[0];\n        return alignments.every(function(alignment) {\n            return alignment === firstAlignment;\n        }) ? firstAlignment : null;\n    }\n'''
+          if old not in s:
+              raise SystemExit('table cell converter not found')
+          s = s.replace(old, new, 1)
+          p.write_text(s)
+
+          p = Path('test/alignment.tests.js')
+          s = p.read_text()
+          if "Word start alignment maps to CSS left" not in s:
+              s += '''\n\ntest('Word start alignment maps to CSS left', function() {\n    return converter({preserveAlignment: true}).convertToHtml(paragraph("Start", "start")).then(function(result) {\n        assert.equal(result.value, '<p style="text-align: left">Start</p>');\n    });\n});\n\n\ntest('Word end alignment maps to CSS right', function() {\n    return converter({preserveAlignment: true}).convertToHtml(paragraph("End", "end")).then(function(result) {\n        assert.equal(result.value, '<p style="text-align: right">End</p>');\n    });\n});\n'''
+              p.write_text(s)
+          PY
+
+      - name: Test
+        run: |
+          npm ci
+          npm test
+          npm run check-typescript
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/document-to-html.js test/alignment.tests.js
+          git commit -m "Integrate table cell alignment into dev"
+          git push
