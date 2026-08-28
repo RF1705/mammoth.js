@@ -1,0 +1,97 @@
+name: Fix logical alignment
+
+on:
+  push:
+    branches:
+      - feature/preserve-paragraph-alignment
+    paths:
+      - .github/workflows/fix-logical-alignment.yml
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/preserve-paragraph-alignment
+
+      - name: Update alignment mapping
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('lib/document-to-html.js')
+          text = path.read_text()
+          old = '''        if (alignment === "both" || alignment === "distribute") {
+              return "justify";
+          }
+
+          if (alignment === "left" || alignment === "right" || alignment === "center" ||
+                  alignment === "start" || alignment === "end" || alignment === "justify") {
+              return alignment;
+          }
+'''
+          new = '''        if (alignment === "both" || alignment === "distribute") {
+              return "justify";
+          }
+
+          if (alignment === "start") {
+              return "left";
+          }
+
+          if (alignment === "end") {
+              return "right";
+          }
+
+          if (alignment === "left" || alignment === "right" || alignment === "center" ||
+                  alignment === "justify") {
+              return alignment;
+          }
+'''
+          if old not in text:
+              raise SystemExit('Expected cssAlignmentFor block not found')
+          path.write_text(text.replace(old, new, 1))
+
+          path = Path('test/alignment.tests.js')
+          text = path.read_text()
+          marker = '''test('Word both alignment maps to CSS justify', function() {
+              return converter({preserveAlignment: true}).convertToHtml(paragraph("Justified", "both")).then(function(result) {
+                  assert.equal(result.value, '<p style="text-align: justify">Justified</p>');
+              });
+          });
+'''
+          addition = marker + '''\n\ntest('Word start alignment maps to CSS left', function() {
+              return converter({preserveAlignment: true}).convertToHtml(paragraph("Start", "start")).then(function(result) {
+                  assert.equal(result.value, '<p style="text-align: left">Start</p>');
+              });
+          });
+
+
+test('Word end alignment maps to CSS right', function() {
+              return converter({preserveAlignment: true}).convertToHtml(paragraph("End", "end")).then(function(result) {
+                  assert.equal(result.value, '<p style="text-align: right">End</p>');
+              });
+          });
+'''
+          if "Word start alignment maps to CSS left" not in text:
+              if marker not in text:
+                  raise SystemExit('Expected alignment test marker not found')
+              path.write_text(text.replace(marker, addition, 1))
+          PY
+
+      - name: Test
+        run: |
+          npm ci
+          npm test
+          npm run check-typescript
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/document-to-html.js test/alignment.tests.js
+          git commit -m "Normalize logical paragraph alignment"
+          git push
