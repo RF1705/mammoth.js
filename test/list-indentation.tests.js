@@ -184,3 +184,42 @@ test('ignored empty paragraphs do not break nested ordered lists', function() {
             '<li>Second nested item</li></ol></li></ol>');
     });
 });
+
+
+test('nested ordered list re-entry stays under the new parent', function() {
+    var root = {
+        isOrdered: true,
+        level: "0",
+        numId: "1",
+        numFmt: "decimal",
+        levelText: "%1."
+    };
+    var nested = {
+        isOrdered: true,
+        level: "1",
+        numId: "1",
+        numFmt: "decimal",
+        levelText: "%1.%2"
+    };
+
+    var document = new documents.Document([
+        paragraph("Parent 1", root),
+        paragraph("Child 1.1", nested),
+        paragraph("Child 1.2", nested),
+        paragraph("Parent 2", root),
+        paragraph("Child 2.1", nested),
+        paragraph("Child 2.2", nested)
+    ]);
+
+    return converter({
+        numberingClassMap: [{
+            numFmt: "decimal",
+            levelText: "%1.%2",
+            className: "legal-list"
+        }]
+    }).convertToHtml(document).then(function(result) {
+        assert.equal(result.value,
+            '<ol><li>Parent 1<ol class="legal-list"><li>Child 1.1</li><li>Child 1.2</li></ol></li>' +
+            '<li>Parent 2<ol class="legal-list"><li>Child 2.1</li><li>Child 2.2</li></ol></li></ol>');
+    });
+});
