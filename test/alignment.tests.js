@@ -54,3 +54,17 @@ test('Word both alignment maps to CSS justify', function() {
         assert.equal(result.value, '<p style="text-align: justify">Justified</p>');
     });
 });
+
+
+test('Word start alignment maps to CSS left', function() {
+    return converter({preserveAlignment: true}).convertToHtml(paragraph("Start", "start")).then(function(result) {
+        assert.equal(result.value, '<p style="text-align: left">Start</p>');
+    });
+});
+
+
+test('Word end alignment maps to CSS right', function() {
+    return converter({preserveAlignment: true}).convertToHtml(paragraph("End", "end")).then(function(result) {
+        assert.equal(result.value, '<p style="text-align: right">End</p>');
+    });
+});
