@@ -146,3 +146,41 @@ test('indentation nesting inference is disabled by default', function() {
                 "<ol><li>Ordered</li></ol><ul><li>Bullet</li></ul>");
         });
 });
+
+
+test('ignored empty paragraphs do not break nested ordered lists', function() {
+    var root = {
+        isOrdered: true,
+        level: "0",
+        numId: "1",
+        numFmt: "decimal",
+        levelText: "%1."
+    };
+    var nested = {
+        isOrdered: true,
+        level: "1",
+        numId: "1",
+        numFmt: "decimal",
+        levelText: "%1.%2"
+    };
+
+    var document = new documents.Document([
+        paragraph("Heading", root),
+        new documents.Paragraph([]),
+        paragraph("First nested item", nested),
+        new documents.Paragraph([]),
+        paragraph("Second nested item", nested)
+    ]);
+
+    return converter({
+        numberingClassMap: [{
+            numFmt: "decimal",
+            levelText: "%1.%2",
+            className: "legal-list"
+        }]
+    }).convertToHtml(document).then(function(result) {
+        assert.equal(result.value,
+            '<ol><li>Heading<ol class="legal-list"><li>First nested item</li>' +
+            '<li>Second nested item</li></ol></li></ol>');
+    });
+});
