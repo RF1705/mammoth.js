@@ -146,3 +146,41 @@ test('indentation nesting inference is disabled by default', function() {
                 "<ol><li>Ordered</li></ol><ul><li>Bullet</li></ul>");
         });
 });
+
+
+test('nested lists attach to resumed parent lists with start and class attributes', function() {
+    var parent = {
+        isOrdered: true,
+        level: "0",
+        numId: "9",
+        numFmt: "decimal",
+        levelText: "(%1)"
+    };
+    var nested = {
+        isOrdered: false,
+        level: "1",
+        numId: "11",
+        numFmt: "bullet"
+    };
+
+    var document = new documents.Document([
+        paragraph("Parent 1", parent),
+        paragraph("Interruption", null),
+        paragraph("Parent 2", parent),
+        paragraph("Nested", nested)
+    ]);
+
+    return converter({
+        numberingClassMap: [{
+            numFmt: "decimal",
+            levelText: "(%1)",
+            className: "parenthesized-list"
+        }]
+    }).convertToHtml(document).then(function(result) {
+        assert.equal(result.value,
+            '<ol class="parenthesized-list"><li>Parent 1</li></ol>' +
+            '<p>Interruption</p>' +
+            '<ol start="2" class="parenthesized-list"><li>Parent 2' +
+            '<ul><li>Nested</li></ul></li></ol>');
+    });
+});
