@@ -23,16 +23,18 @@ function converter(extraOptions) {
     return new DocumentConverter({
         styleMap: styleMapResult.value,
         inferListNestingFromIndentation: options.inferListNestingFromIndentation,
-        numberingClassMap: options.numberingClassMap
+        numberingClassMap: options.numberingClassMap,
+        preserveAlignment: options.preserveAlignment
     });
 }
 
-function paragraph(text, numbering, indent) {
+function paragraph(text, numbering, indent, alignment) {
     return new documents.Paragraph([
         new documents.Run([new documents.Text(text)])
     ], {
         numbering: numbering,
-        indent: indent
+        indent: indent,
+        alignment: alignment
     });
 }
 
@@ -183,4 +185,35 @@ test('nested lists attach to resumed parent lists with start and class attribute
             '<ol start="2" class="parenthesized-list"><li>Parent 2' +
             '<ul><li>Nested</li></ul></li></ol>');
     });
+});
+
+
+test('nested lists attach to aligned parent list items', function() {
+    var parent = {
+        isOrdered: true,
+        level: "0",
+        numId: "9",
+        numFmt: "decimal",
+        levelText: "(%1)"
+    };
+    var nested = {
+        isOrdered: false,
+        level: "1",
+        numId: "11",
+        numFmt: "bullet"
+    };
+
+    var document = new documents.Document([
+        paragraph("Parent", parent, null, "both"),
+        paragraph("Nested", nested, null, "both")
+    ]);
+
+    return converter({preserveAlignment: true})
+        .convertToHtml(document)
+        .then(function(result) {
+            assert.equal(result.value,
+                '<ol><li style="text-align: justify">Parent' +
+                '<ul><li style="text-align: justify">Nested</li></ul>' +
+                '</li></ol>');
+        });
 });
