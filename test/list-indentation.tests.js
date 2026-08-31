@@ -184,3 +184,38 @@ test('ignored empty paragraphs do not break nested ordered lists', function() {
             '<li>Second nested item</li></ol></li></ol>');
     });
 });
+
+
+test('nested lists attach to parent lists with start and class attributes', function() {
+    var parent = {
+        isOrdered: true,
+        level: "0",
+        numId: "9",
+        numFmt: "decimal",
+        levelText: "(%1)",
+        startOverride: 5
+    };
+    var nested = {
+        isOrdered: false,
+        level: "1",
+        numId: "11",
+        numFmt: "bullet"
+    };
+
+    var document = new documents.Document([
+        paragraph("Parent", parent),
+        paragraph("Nested", nested)
+    ]);
+
+    return converter({
+        numberingClassMap: [{
+            numFmt: "decimal",
+            levelText: "(%1)",
+            className: "parenthesized-list"
+        }]
+    }).convertToHtml(document).then(function(result) {
+        assert.equal(result.value,
+            '<ol start="5" class="parenthesized-list"><li>Parent' +
+            '<ul><li>Nested</li></ul></li></ol>');
+    });
+});
