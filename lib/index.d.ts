@@ -38,6 +38,7 @@ interface Options {
     inferListNestingFromIndentation?: boolean;
     preserveAlignment?: boolean;
     numberingClassMap?: Array<NumberingClassMapping>;
+    preserveHeadingNumbering?: boolean;
 }
 
 interface NumberingClassMapping {
