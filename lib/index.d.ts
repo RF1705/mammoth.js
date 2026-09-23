@@ -36,6 +36,7 @@ interface Options {
     externalFileAccess?: boolean;
     transformDocument?: (element: any) => any;
     numberingClassMap?: Array<NumberingClassMapping>;
+    preserveHeadingNumbering?: boolean;
 }
 
 interface NumberingClassMapping {

@@ -282,6 +282,30 @@ A level matching both rules is rendered with both classes, for example:
 
 If `numberingClassMap` is omitted, Mammoth's existing list output is unchanged.
 
+#### Preserving numbering in headings
+
+Word can apply multilevel numbering directly to heading paragraphs, for example `I.`, `1.` and `1.1.`.
+By default Mammoth keeps its existing behaviour and does not insert those generated labels into the heading text.
+
+Set `preserveHeadingNumbering` to `true` to materialise the Word numbering label in generated HTML headings:
+
+```javascript
+var options = {
+    preserveHeadingNumbering: true
+};
+```
+
+For example, numbered Word headings can then be rendered as:
+
+```html
+<h1>I. Entscheidender Teil</h1>
+<h1>1. Anordnung der Änderung des Verfahrensgebietes</h1>
+<h2>1.1. Anordnung der Änderung</h2>
+```
+
+The numbering is calculated per Word numbering definition and honours decimal, upper/lower Roman and upper/lower letter formats.
+Normal Word lists continue to be rendered as HTML lists.
+
 #### Custom image handlers
 
 By default, images are converted to `<img>` elements with the source included inline in the `src` attribute.
