@@ -89,3 +89,86 @@ test("numbered non-list headings do not seed inferred list nesting", function() 
             '<li>First</li><li>Second</li></ol>');
     });
 });
+
+
+test("ordered heading numbering is preserved when preserveHeadingNumbering is enabled", function() {
+    var options = readOptions({
+        preserveHeadingNumbering: true
+    });
+    var styleMapResult = parseStyleMap(options.readStyleMap());
+
+    var headingNumbering = {
+        isOrdered: true,
+        level: "0",
+        numId: "9",
+        numFmt: "upperRoman",
+        levelText: "%1.",
+        start: "1",
+        levels: {
+            "0": {
+                isOrdered: true,
+                level: "0",
+                numFmt: "upperRoman",
+                levelText: "%1.",
+                start: "1"
+            }
+        }
+    };
+
+    var document = new documents.Document([
+        paragraph("Entscheidender Teil", {
+            styleId: "Heading1",
+            styleName: "Heading 1",
+            numbering: headingNumbering
+        })
+    ]);
+
+    var normalisedDocument = nonListNumbering.normalise(
+        document,
+        styleMapResult.value,
+        {preserveHeadingNumbering: true}
+    );
+
+    assert.strictEqual(
+        normalisedDocument.children[0].numbering,
+        headingNumbering
+    );
+
+    var converter = new DocumentConverter({
+        styleMap: styleMapResult.value,
+        preserveHeadingNumbering: true
+    });
+
+    return converter.convertToHtml(normalisedDocument).then(function(result) {
+        assert.equal(result.value, "<h1>I. Entscheidender Teil</h1>");
+    });
+});
+
+
+test("ordered heading numbering is still stripped by default", function() {
+    var options = readOptions({});
+    var styleMapResult = parseStyleMap(options.readStyleMap());
+
+    var headingNumbering = {
+        isOrdered: true,
+        level: "0",
+        numId: "9",
+        numFmt: "upperRoman",
+        levelText: "%1."
+    };
+
+    var document = new documents.Document([
+        paragraph("Entscheidender Teil", {
+            styleId: "Heading1",
+            styleName: "Heading 1",
+            numbering: headingNumbering
+        })
+    ]);
+
+    var normalisedDocument = nonListNumbering.normalise(
+        document,
+        styleMapResult.value
+    );
+
+    assert.equal(normalisedDocument.children[0].numbering, null);
+});
